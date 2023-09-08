@@ -1,13 +1,14 @@
 from dolphin import event, memory, controller
+from multiprocessing.connection import Client
 import os
 
 with open('log.txt', 'w') as file:
     file.write("Created new file!\n")
 with open('log.txt', 'a') as file:
     file.write('Successfully loaded!\n')
-with open('dolphin_pid.txt', 'w') as file:
-    file.write(str(os.getpid()))
 
+client = Client(('localhost', 20000), authkey=b'supersecure')
+client.send("Start")
 
 class Dolphin():
     def __init__(self):
