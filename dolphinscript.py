@@ -1,8 +1,8 @@
 from dolphin import event, memory, controller, savestate
 from multiprocessing.connection import Client, Listener
 import sys
-#sys.path.append('C:\\Users\\Carson\\AppData\\Local\\Programs\\Python\\Python38\\Lib\\site-packages')
-#import numpy
+sys.path.append('C:\\Users\\Carson\\AppData\\Local\\Programs\\Python\\Python38\\Lib\\site-packages')
+from PIL import Image, ImageEnhance
 
 with open('log.txt', 'w') as file:
     file.write("Created new file!\n")
@@ -23,34 +23,27 @@ class Dolphin():
         }
         self.speed = 0
         self.position = 0
-        print('duh')
         self.client_connection = Client(('localhost', 20000), authkey=b'supersecure')
         self.client_connection.send("Script Started!")
         self.listener = Listener(('localhost', 22000), authkey=b'password')
         self.listener_connection = self.listener.accept()
-        print('Waiting for mesg')
+        print('Waiting for response...')
         msg = self.listener_connection.recv()
         with open('log.txt', 'a') as file:
-            file.write('Received message: ' + str(msg))     
+            file.write('Received message: ' + str(msg))    
+        print('Received response!') 
 
-print ('here')
 main = Dolphin()
-print('test')
 # for i in range(4):
 #     await event.frameadvance()
 while True:
     (width, height, data) = await event.framedrawn()
-    for i in range(2):
-        await event.frameadvance()
-    #img = PIL.Image.frombytes('RGBA', (width, height), data, 'raw')
-    #img = img.convert("L")
-    #enhancer = PIL.ImageEnhance.Sharpness(img)
-    #img = enhancer.enhance(4)
-    #img = img.resize((140,75))
-    #enhancer = PIL.ImageEnhance.Sharpness(img)
-    #img = enhancer.enhance(4)
-    #img = np.asarray(img)
-    #img = img.astype(np.uint8)
+    await event.frameadvance()
+    img = Image.frombytes('RGBA', (width, height), data, 'raw')
+    img = img.convert("L")
+    img = img.resize((168,90))
+    enhancer = ImageEnhance.Sharpness(img)
+    img = enhancer.enhance(5)
     msg = main.listener_connection.recv()
     if msg['Type'] == 'Inputs':
         stickX = 128
@@ -65,7 +58,7 @@ while True:
     speed = memory.read_f32(0x80FCE500)
     position = memory.read_f32(0x80E47870)
     main.client_connection.send({'Type': 'Info', 'Speed': speed, 'Position': position})
-    main.client_connection.send({'Type': 'Screen', 'Data': data, 'Width': width, 'Height': height})
+    main.client_connection.send({'Type': 'Screen', 'Data': img, 'Width': 168, 'Height': 90})
     # print('Speed: ' + str(speed))
     # print('Track Position: ' + str(position))
 

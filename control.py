@@ -3,16 +3,21 @@ from multiprocessing.connection import Listener, Client
 import time
 import subprocess
 from PIL import Image
+import gym
 from matplotlib import pyplot as plt
 import numpy as np
 
-class Controller():
+class GameEnv(gym.Env):
     def __init__(self):
         self.initialized = False
         self.listener_connection = None
         self.client_connection = None
         self.speed = 0.0
         self.position = 0.0
+        self.ydim = 90
+        self.xdim = 168
+        self.observation_space = gym.spaces.Box(low = 0, high = 255, shape = (self.ydim, self.xdim), dtype=np.uint8)
+        self.action_space = gym.spaces.Discrete(6)
     
     def initialize(self):
         print('Starting Emulator')
@@ -58,12 +63,13 @@ class Controller():
                 self.position = received['Position']
             if received['Type'] == 'Screen':
                 print('Screenshot received!')
-                imgs = Image.frombytes('RGBA', (received['Width'], received['Height']), received['Data'], 'raw')
-                plt.imshow(imgs)
+                imgs = np.asarray(received['Data'])
+                imgs = imgs.astype(np.uint8)
+                plt.imshow(imgs,cmap='gray')
                 plt.waitforbuttonpress()
 
 def main():
-    test = Controller()
+    test = GameEnv()
     test.initialize()
     test.run()
 
