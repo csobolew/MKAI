@@ -1,7 +1,5 @@
 import os
 from multiprocessing.connection import Listener, Client
-import time
-import subprocess
 from PIL import Image
 import gym
 from matplotlib import pyplot as plt
@@ -14,6 +12,8 @@ class GameEnv(gym.Env):
         self.client_connection = None
         self.speed = 0.0
         self.position = 0.0
+        self.dolphin_path = "..\\dolphin\\Dolphin.exe"
+        self.command = 'cmd /c ' + self.dolphin_path + " --script C:\\Users\\Carson\\MKAI\\Scripts\\dolphinscript.py \\b --exec C:\\Users\\Carson\\MKAI\\MKWii.iso"
         self.ydim = 90
         self.xdim = 168
         self.observation_space = gym.spaces.Box(low = 0, high = 255, shape = (self.ydim, self.xdim), dtype=np.uint8)
@@ -33,45 +33,69 @@ class GameEnv(gym.Env):
         self.client_connection = Client(dolphinClient, authkey=b'password')
         self.client_connection.send('Testing!')
         print('Message sent.')
-        self.reset_race()
+        self.reset()
+    
+    def step(self, action):
+        left = False
+        right = False
+        a = False
+        up = False
+        down = False
+        l = False
+        screen = False
+        info = False
+        if action == 0:
+            left = True
+        elif action == 1:
+            right = True
+        elif action == 2:
+            a = True
+        elif action == 3:
+            up = True
+        elif action == 4:
+            down = True
+        elif action == 5:
+            l = True
+        self.client_connection.send({
+            'Type': 'Inputs',
+            'StickLeft': left,
+            'StickRight': right,
+            'A': a,
+            'Up': up,
+            'Down': down,
+            'L': l
+            })
+        while not screen or not info:
+            msg = self.listener_connection.recv()
+            if msg['Type'] == 'Screen' and not screen:
+                obs = np.asarray(msg['Data'])
+                obs = obs.astype(np.uint8)
+                screen = True
+            if msg['Type'] == 'Info' and not info:
+                info = {'Speed': msg['Speed'], 'Position': msg['Position']}
+                info = True
+        return (obs, info)
+                
 
     def launch(self):
-        dolphin_path = "..\\dolphin\\Dolphin.exe"
-        command = 'cmd /c ' + dolphin_path + " --script C:\\Users\\Carson\\MKAI\\Scripts\\dolphinscript.py \\b --exec C:\\Users\\Carson\\MKAI\\MKWii.iso"
-        os.popen(command)
+        os.popen(self.command)
         print('Dolphin Loaded')
 
-    def reset_race(self):
+    def reset(self, seed = None):
+        super().reset(seed=seed)
         self.client_connection.send({'Type': 'Reset'})
-    
-    def run(self):
         while True:
-            self.client_connection.send(
-            {
-            'Type': 'Inputs',
-            'StickLeft': True,
-            'StickRight': True,
-            'A': True,
-            'Up': True,
-            'Down': False,
-            'L': True
-            }
-            )
-            received = self.listener_connection.recv()
-            if received['Type'] == 'Info':
-                self.speed = received['Speed']
-                self.position = received['Position']
-            if received['Type'] == 'Screen':
-                print('Screenshot received!')
-                imgs = np.asarray(received['Data'])
-                imgs = imgs.astype(np.uint8)
-                plt.imshow(imgs,cmap='gray')
-                plt.waitforbuttonpress()
+            msg = self.listener_connection.recv()
+            if msg['Type'] == 'Screen':
+                img = np.asarray(msg['Data'])
+                img = img.astype(np.uint8)
+                return img
 
 def main():
     test = GameEnv()
     test.initialize()
-    test.run()
+    while True:
+        test.step(2)
 
 if __name__ == '__main__':
     main()
