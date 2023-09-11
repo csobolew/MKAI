@@ -72,7 +72,8 @@ class GameEnv(gym.Env):
                 obs = obs.astype(np.uint8)
                 screen = True
             if msg['Type'] == 'Info' and not info:
-                info = {'Speed': msg['Speed'], 'Position': msg['Position']}
+                info = {'Speed': msg['Speed'], 'Position': msg['Position'], 'Frames': msg['Frames']}
+                print(msg['Frames'])
                 info = True
         return (obs, info)
                 
